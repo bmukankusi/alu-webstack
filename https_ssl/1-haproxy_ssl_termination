@@ -34,12 +34,21 @@ defaults
         errorfile 504 /etc/haproxy/errors/504.http
 
 
-frontend lb-frontend
-    bind *:443 ssl crt /etc/letsencrypt/live/www.bmukankusi.tech/www.bmukankusi.tech.pem
-    http-request add-header X-Forwarded-Proto https
-    default_backend lb-backend
+frontend http-in
+    bind *:80
+    mode http
+    option forwardfor
+    reqadd X-Forwarded-Proto:\ http
+    redirect scheme https code 301 if !{ ssl_fc }
 
-backend lb-backend
-    balance roundrobin
-    server 5874-web-01 54.83.64.123
-    server 5874-web-02 54.234.22.105
+frontend https-in
+    bind *:443 ssl crt /etc/letsencrypt/live/www.bmukankusi.tech/www.bmukankusi.tech.pem
+    mode http
+    option forwardfor
+    reqadd X-Forwarded-Proto:\ https
+    acl is_holberton hdr_end(host) -i www.bmukankusi.tech
+    use_backend holberton_server if is_holberton
+
+backend holberton_server
+    server 5874-web-01 54.83.64.123:80 check
+    server 5874-web-02 54.234.22.105:80 check
